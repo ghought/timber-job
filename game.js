@@ -683,7 +683,7 @@ const local = location.hostname === 'localhost';
 const unpause = () => { paused = false; if (AC) AC.resume(); };
 const bridge = window.PcktBridge.init({
   gameId: local ? 'timber-job-local' : 'timber-job',
-  allowedParents: local ? ['http://localhost:4173'] : ['https://hub-production-cff8.up.railway.app'],
+  allowedParents: local ? ['http://localhost:4173'] : ['https://pckt.up.railway.app'],
   capabilities: { pause: true, mute: true, restart: true },
   onPause() { paused = true; if (G.sawing) stopSaw(); if (AC) AC.suspend(); },
   onResume: unpause,
