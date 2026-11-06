@@ -39,11 +39,13 @@ const persist = () => { try { localStorage.setItem('timberjob', JSON.stringify(s
 
 // ---------- audio ----------
 let AC, master, noiseBuf, saw;
+let paused = false, muted = false;
+const VOLUME = .8;
 function audio() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   const Ctor = window.AudioContext || window.webkitAudioContext;
   if (!Ctor) return;
-  AC = new Ctor(); master = AC.createGain(); master.gain.value = .8; master.connect(AC.destination);
+  AC = new Ctor(); master = AC.createGain(); master.gain.value = muted ? 0 : VOLUME; master.connect(AC.destination);
   noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -256,6 +258,7 @@ function startJob(i) {
   $('cash').textContent = `$${save.cash}`;
   setTools();
   hint(L.top ? 'Check the drop zone' : 'Survey the site');
+  bridge.playStarted();
 }
 function hint(s) { $('hint').textContent = s; }
 function setTools() {
@@ -338,6 +341,7 @@ function finish() {
       stars = 1 + (nd >= .22 && nd <= .42 ? 1 : 0) + (G.swings <= L.par ? 1 : 0);
     }
   }
+  bridge.roundEnded({ job: G.i + 1, passed: ok, score: stars });
   if (ok) {
     const pay = 40 * (G.i + 1) * stars;
     if ((save.stars[G.i] || 0) < stars) { save.cash += pay; save.stars[G.i] = stars; persist(); }
@@ -350,7 +354,7 @@ function finish() {
   }
 }
 async function share(text, btn) {
-  const url = location.href.split(/[?#]/)[0];
+  const url = bridge.canonicalUrl() || location.href.split(/[?#]/)[0];
   if (navigator.share) {
     try { await navigator.share({ title: 'Timber Job', text, url }); return; }
     catch (e) { if (e.name === 'AbortError') return; }
@@ -673,6 +677,20 @@ function draw() {
   c.globalAlpha = 1;
 }
 
+// ---------- arcade bridge ----------
+// Does nothing unless the game is framed by an allowed hub. See pckt-bridge.js.
+const local = location.hostname === 'localhost';
+const unpause = () => { paused = false; if (AC) AC.resume(); };
+const bridge = window.PcktBridge.init({
+  gameId: local ? 'timber-job-local' : 'timber-job',
+  allowedParents: local ? ['http://localhost:4173'] : [],
+  capabilities: { pause: true, mute: true, restart: true },
+  onPause() { paused = true; if (G.sawing) stopSaw(); if (AC) AC.suspend(); },
+  onResume: unpause,
+  onMute(value) { muted = value; if (master) master.gain.value = muted ? 0 : VOLUME; },
+  onRestart() { unpause(); if (G.lvl && G.state !== 'menu') startJob(G.i); },
+});
+
 // ---------- boot ----------
 function resize() {
   W = innerWidth; H = innerHeight; DPR = Math.min(devicePixelRatio || 1, 2.5);
@@ -683,7 +701,7 @@ let last = performance.now();
 function frame(now) {
   let dt = Math.min((now - last) / 1000, .05); last = now;
   if (G.stop > 0) { G.stop -= dt; dt *= .05; }
-  if (G.state !== 'menu') update(dt);
+  if (G.state !== 'menu' && !paused) update(dt);
   draw();
   requestAnimationFrame(frame);
 }
