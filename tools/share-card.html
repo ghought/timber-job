@@ -1,0 +1,95 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Timber Job share card</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@800&display=swap">
+<style>html,body{margin:0;background:#16302b}canvas{display:block}</style>
+<canvas id="c" width="1200" height="630"></canvas>
+<script>
+// Source for assets/share.png. Rendered by tools/render-art.sh.
+let seed = 7; const rnd = (a = 1, b) => { seed = (seed * 16807) % 2147483647; const r = seed / 2147483647; return b === undefined ? r * a : a + r * (b - a); };
+const g = document.getElementById('c').getContext('2d'), W = 1200, H = 630, GY = 540;
+function draw() {
+  const sky = g.createLinearGradient(0, 0, 0, GY);
+  sky.addColorStop(0, '#3f4e86'); sky.addColorStop(.55, '#e0795a'); sky.addColorStop(1, '#ffc46b');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  const sun = g.createRadialGradient(560, 400, 10, 560, 400, 620);
+  sun.addColorStop(0, '#fff0b0'); sun.addColorStop(.14, '#fff0b0aa'); sun.addColorStop(1, '#fff0b000');
+  g.fillStyle = sun; g.fillRect(0, 0, W, H);
+  ['#7a6f86', '#4f6a68', '#2f5d48'].forEach((col, i) => {
+    const base = 400 + i * 45, ph = i * 2.1 + 1;
+    g.fillStyle = col; g.beginPath(); g.moveTo(0, H);
+    for (let x = 0; x <= W; x += 6) g.lineTo(x, base + Math.sin(x * .006 + ph) * 26 + Math.sin(x * .017 + ph * 2) * 10 - (i ? Math.abs(Math.sin(x * .11 + ph)) * (8 + i * 6) : 0));
+    g.lineTo(W, H); g.fill();
+  });
+  // house the tree has to miss
+  const hx = 1040, hw = 170, wh = 84;
+  g.fillStyle = '#e8d6b4'; g.fillRect(hx, GY - wh, hw, wh);
+  g.fillStyle = 'rgba(0,0,0,.14)'; g.fillRect(hx + hw * .55, GY - wh, hw * .45, wh);
+  g.fillStyle = '#b5533c'; g.beginPath(); g.moveTo(hx - 12, GY - wh); g.lineTo(hx + hw / 2, GY - wh - 62); g.lineTo(hx + hw + 12, GY - wh); g.fill();
+  g.fillStyle = '#ffe9a8'; g.fillRect(hx + 20, GY - 66, 34, 30); g.fillRect(hx + hw - 54, GY - 66, 34, 30);
+  g.fillStyle = '#6b4a30'; g.fillRect(hx + hw / 2 - 20, GY - 52, 40, 52);
+  // ground
+  const gr = g.createLinearGradient(0, GY, 0, H); gr.addColorStop(0, '#4f8a3f'); gr.addColorStop(1, '#1f4a2c');
+  g.fillStyle = gr; g.fillRect(0, GY, W, H - GY);
+  // trunk
+  const tx = 860, r = 62, top = 120;
+  g.save();
+  g.beginPath(); g.moveTo(tx - r - 8, GY + 6); g.lineTo(tx - r + 14, top); g.lineTo(tx + r - 14, top); g.lineTo(tx + r + 8, GY + 6); g.closePath(); g.clip();
+  const bark = g.createLinearGradient(tx - r, 0, tx + r, 0);
+  bark.addColorStop(0, '#3a2416'); bark.addColorStop(.38, '#8a5a36'); bark.addColorStop(1, '#2a180e');
+  g.fillStyle = bark; g.fillRect(tx - r - 10, top, 2 * r + 20, GY - top + 8);
+  for (let i = 0; i < 150; i++) {
+    const x = rnd(tx - r, tx + r), y = rnd(top, GY), len = rnd(24, 80);
+    g.strokeStyle = `rgba(${rnd() < .6 ? '20,10,5' : '190,140,95'},${rnd(.15, .45)})`; g.lineWidth = rnd(1, 3.4);
+    g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + rnd(-5, 5), y + len * .3, x + rnd(-5, 5), y + len * .6, x + rnd(-3, 3), y + len); g.stroke();
+  }
+  // the notch, in the same layered wood as the game
+  const cy = 450, ax = tx + 14, ex = tx - r - 16, pts = [[ex, cy - 70]];
+  for (let i = 1; i < 6; i++) pts.push([ex + (ax - ex) * i / 6 + rnd(-3, 3), cy - 70 + 70 * i / 6 + rnd(-3, 3)]);
+  pts.push([ax, cy]);
+  for (let i = 1; i < 6; i++) pts.push([ax + (ex - ax) * i / 6 + rnd(-3, 3), cy + 14 * i / 6 + rnd(-2, 2)]);
+  pts.push([ex, cy + 14]);
+  const path = () => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); };
+  [['#f6e2b8', 26], ['#e0ae6c', 13], ['#a8703f', 4]].forEach(([c, w]) => { path(); g.strokeStyle = c; g.lineWidth = w; g.lineJoin = 'round'; g.stroke(); });
+  g.restore();
+  // what shows through the notch: redraw the sky band clipped to the wedge
+  g.save(); g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+  g.fillStyle = '#2f5d48'; g.fillRect(tx - r + 6, cy - 80, 2 * r, 110);
+  g.fillStyle = '#ffc46b55'; g.fillRect(tx - r + 6, cy - 80, 2 * r, 40);
+  g.restore();
+  // crown
+  const cx = tx, cw = 620;
+  for (let i = 6; i >= 0; i--) {
+    const f = i / 6, y0 = 262 - f * 300, hw2 = (1 - f * .72) * cw / 2;
+    const c = g.createLinearGradient(cx - hw2, 0, cx + hw2, 0);
+    c.addColorStop(0, '#2f7a4a'); c.addColorStop(.45, '#1f5c3a'); c.addColorStop(1, '#0f3a2a');
+    g.fillStyle = c; g.beginPath(); g.moveTo(cx, y0 - 190); g.lineTo(cx + hw2, y0);
+    for (let k = 10; k >= 0; k--) g.lineTo(cx - hw2 + 2 * hw2 * k / 10, y0 + (k % 2 ? 16 : -3));
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(160,220,140,.3)'; g.lineWidth = 5; g.beginPath(); g.moveTo(cx - 8, y0 - 150); g.lineTo(cx - hw2 * .85, y0 - 10); g.stroke();
+  }
+  // axe
+  g.save(); g.translate(640, 516); g.rotate(-.42);
+  g.fillStyle = '#8a5a36'; g.fillRect(0, -7, 190, 14);
+  g.fillStyle = '#c9d3d6'; g.beginPath(); g.moveTo(150, -24); g.lineTo(192, -42); g.lineTo(206, 0); g.lineTo(192, 42); g.lineTo(150, 24); g.closePath(); g.fill();
+  g.fillStyle = '#eef4f5'; g.fillRect(192, -40, 7, 80);
+  g.restore();
+  // chips
+  const pale = ['#f6e2b8', '#e0ae6c', '#c79a5e'];
+  for (let i = 0; i < 46; i++) {
+    const a = rnd(2.5, 4.1), d = rnd(40, 300), s = rnd(4, 15);
+    g.save(); g.translate(790 + Math.cos(a) * d, 440 + Math.sin(a) * d * .75); g.rotate(rnd(6.28));
+    g.fillStyle = pale[i % 3]; g.fillRect(-s, -s * .45, s * 2, s * .9); g.restore();
+  }
+  // grass over the base
+  for (let i = 0; i < 170; i++) { const x = rnd(W), h = rnd(10, 26); g.fillStyle = i % 2 ? '#4f8a3f' : '#2f6b36'; g.beginPath(); g.moveTo(x - 6, GY + 8); g.lineTo(x, GY - h); g.lineTo(x + 6, GY + 8); g.fill(); }
+  // title
+  g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+  g.font = '400 124px "Lilita One"';
+  g.fillStyle = 'rgba(22,48,43,.55)'; g.fillText('Timber', 68, 174); g.fillText('Job', 68, 292);
+  g.fillStyle = '#fff6e6'; g.fillText('Timber', 62, 166); g.fillText('Job', 62, 284);
+  g.font = '800 34px Nunito'; g.fillStyle = '#16302b';
+  g.fillText('Twelve tree jobs.', 66, 350); g.fillText('Land every one safely.', 66, 394);
+}
+Promise.all([document.fonts.load('400 124px "Lilita One"'), document.fonts.load('800 34px Nunito')]).then(draw, draw);
+</script>
